@@ -57,7 +57,7 @@ The file declares:
 Current version: **v0.1 (draft)**  
 Status: Open RFC — feedback welcome
 
-This spec is community-governed. Changes follow the RFC process in `/RFC`.
+This spec is community-governed. Propose changes via GitHub issues and pull requests.
 
 ---
 
