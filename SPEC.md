@@ -361,6 +361,5 @@ A conforming agent.json file MAY:
 
 ## Contributing
 
-Changes to this spec follow the RFC process in `/RFC`.  
-Open an issue or submit a pull request to propose changes.  
+Propose changes via GitHub issues and pull requests.
 Contact: spec@agentwebprotocol.org

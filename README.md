@@ -61,6 +61,5 @@ This spec is community-governed. Propose changes via GitHub issues and pull requ
 
 ## Contributing
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) for the RFC process.  
-Open an issue to propose a change or flag a gap in the spec.  
+Open an issue to propose a change or submit a pull request.
 Contact: spec@agentwebprotocol.org
