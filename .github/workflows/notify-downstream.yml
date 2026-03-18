@@ -1,0 +1,76 @@
+name: Notify downstream repos on spec change
+
+on:
+  push:
+    branches: [main]
+    paths: ['SPEC.md']
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get commit info
+        id: commit
+        run: |
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
+
+      - name: Notify agentwebprotocol.org
+        env:
+          GH_TOKEN: ${{ secrets.AWP_NOTIFY_TOKEN }}
+        run: |
+          gh issue create \
+            --repo agentwebprotocol/agentwebprotocol.org \
+            --title "Spec updated: ${{ steps.commit.outputs.message }}" \
+            --body "SPEC.md was updated in [spec@${{ steps.commit.outputs.sha }}](https://github.com/agentwebprotocol/spec/commit/${{ github.sha }}).
+
+          **Action needed:**
+          - [ ] Update \`public/llms-full.txt\` with new spec content
+
+          The \`/spec\` page auto-fetches from GitHub — already showing latest." \
+            --label "spec-update" || true
+
+      - name: Notify agent-json.org
+        env:
+          GH_TOKEN: ${{ secrets.AWP_NOTIFY_TOKEN }}
+        run: |
+          gh issue create \
+            --repo agentwebprotocol/agent-json.org \
+            --title "Spec updated: ${{ steps.commit.outputs.message }}" \
+            --body "SPEC.md was updated in [spec@${{ steps.commit.outputs.sha }}](https://github.com/agentwebprotocol/spec/commit/${{ github.sha }}).
+
+          **Action needed (if schema fields changed):**
+          - [ ] Update \`src/lib/schema.ts\`
+          - [ ] Update \`src/lib/examples.ts\` if relevant
+          - [ ] Update \`public/agent.json\` if relevant" \
+            --label "spec-update" || true
+
+      - name: Notify agent.json CLI
+        env:
+          GH_TOKEN: ${{ secrets.AWP_NOTIFY_TOKEN }}
+        run: |
+          gh issue create \
+            --repo agentwebprotocol/agent.json \
+            --title "Spec updated: ${{ steps.commit.outputs.message }}" \
+            --body "SPEC.md was updated in [spec@${{ steps.commit.outputs.sha }}](https://github.com/agentwebprotocol/spec/commit/${{ github.sha }}).
+
+          **Action needed (if schema fields changed):**
+          - [ ] Update \`src/schema.js\` validation rules
+          - [ ] Bump version and \`npm publish\`" \
+            --label "spec-update" || true
+
+      - name: Notify MCP server
+        env:
+          GH_TOKEN: ${{ secrets.AWP_NOTIFY_TOKEN }}
+        run: |
+          gh issue create \
+            --repo agentwebprotocol/mcp-server \
+            --title "Spec updated: ${{ steps.commit.outputs.message }}" \
+            --body "SPEC.md was updated in [spec@${{ steps.commit.outputs.sha }}](https://github.com/agentwebprotocol/spec/commit/${{ github.sha }}).
+
+          **Action needed:**
+          - [ ] Update embedded spec in \`src/index.js\`
+          - [ ] Bump version and \`npm publish\`" \
+            --label "spec-update" || true

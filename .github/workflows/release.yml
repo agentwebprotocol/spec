@@ -1,0 +1,39 @@
+name: Create release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract the changelog section for this version
+          awk "/^### v${{ steps.version.outputs.version }}/,/^### v[0-9]|^---/{
+            if (/^### v[0-9]/ && !/v${{ steps.version.outputs.version }}/) exit
+            if (/^---/) exit
+            print
+          }" SPEC.md > /tmp/changelog.md
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/changelog.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "AWP Spec v${{ steps.version.outputs.version }}" \
+            --notes-file /tmp/changelog.md \
+            SPEC.md
