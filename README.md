@@ -1,10 +1,8 @@
 # Agent Web Protocol (AWP)
 
-The open standard for declaring any web surface as agent-ready.
+**Make any website agent-ready with a single JSON file.**
 
-agent.json is to AI agents what robots.txt is to web crawlers — a simple, 
-machine-readable file any domain can publish to tell agents exactly what 
-they can do, what inputs they need, and how to recover from errors.
+AWP defines `agent.json` — a machine-readable file at `/.well-known/agent.json` that tells AI agents what your site can do. Like `robots.txt` for crawlers, but for AI agents.
 
 ---
 
