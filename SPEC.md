@@ -1,7 +1,7 @@
-# Agent Web Protocol — Specification v0.1
+# Agent Web Protocol — Specification v0.2
 
 **Status:** Draft RFC  
-**Published:** 2026-03-16  
+**Published:** 2026-04-16  
 **Authors:** Agent Web Protocol contributors  
 **License:** MIT  
 
@@ -53,7 +53,7 @@ MAJOR.MINOR
 - Agents encountering an unknown major version SHOULD degrade gracefully 
   rather than fail entirely.
 
-Current version: `0.1`
+Current version: `0.2`
 
 ---
 
@@ -61,9 +61,10 @@ Current version: `0.1`
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `awp_version` | string | yes | Spec version (e.g. `"0.1"`) |
+| `awp_version` | string | yes | Spec version (e.g. `"0.2"`) |
 | `domain` | string | yes | Canonical domain this file applies to |
 | `intent` | string | yes | Plain language description of the surface |
+| `protocols` | object | no | Other agent protocols this surface speaks (see §5.5) |
 | `capabilities` | object | no | Feature flags (see §6) |
 | `auth` | object | no | Authentication contract (see §7) |
 | `entities` | object | no | Typed data models (see §8) |
@@ -72,6 +73,94 @@ Current version: `0.1`
 | `dependencies` | object | no | Action prerequisite graph (see §11) |
 | `agent_hints` | object | no | Semantic planning guidance (see §12) |
 | `agent_status` | object | no | Liveness signal (see §13) |
+
+---
+
+## 5.5 Protocols
+
+AWP is the discovery layer — the manifest. Many surfaces also speak one or
+more transport, tool-invocation, or payment protocols. The `protocols` field
+declares them so an agent reading agent.json knows, in a single fetch, every
+standard the surface supports and where to reach it.
+
+```json
+"protocols": {
+  "a2a": {
+    "version": "0.3",
+    "endpoint": "https://agent.example.com/agent/message",
+    "agent_card": "https://agent.example.com/.well-known/agent-card.json"
+  },
+  "mcp": {
+    "version": "2025-06-18",
+    "endpoint": "https://mcp.example.com",
+    "transport": "http"
+  },
+  "x402": {
+    "version": "1.0",
+    "wallet": "0x..."
+  },
+  "payment": {
+    "type": "stripe_link",
+    "agent_op": "checkout.create"
+  }
+}
+```
+
+### Field structure
+
+Each entry is keyed by a protocol identifier (lowercase, hyphenated). The
+value is an object with at least:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | string | yes | Protocol version this surface conforms to |
+| `endpoint` | string (url) | conditional | Where to reach the protocol. Required for transport/tool protocols; optional for payment-only declarations |
+
+Additional protocol-specific fields are allowed (e.g. `agent_card` for A2A,
+`transport` for MCP, `wallet` for x402). Agents MUST ignore unknown
+protocol-specific fields rather than fail.
+
+### Registered protocol identifiers
+
+The following identifiers SHOULD be used when a surface speaks a known
+standard. This list is informative; surfaces MAY declare additional
+custom protocols.
+
+| Identifier | Standard | Layer |
+|------------|----------|-------|
+| `a2a` | Agent-to-Agent (Google) | Transport / messaging |
+| `mcp` | Model Context Protocol (Anthropic) | Tool invocation |
+| `acp` | Agent Communication Protocol (IBM) | Messaging |
+| `ap2` | Agent Payments Protocol (Google) | Payment |
+| `x402` | HTTP 402 + crypto wallet (Coinbase) | Payment |
+| `skyfire` | Skyfire agent payments | Payment / identity |
+| `openapi` | OpenAPI / Swagger | API description |
+| `graphql` | GraphQL | API description |
+| `payment` | Generic payment hand-off (e.g. hosted checkout link) | Payment |
+
+### Linking actions to protocols
+
+Actions MAY include an optional `via` field naming a protocol declared in
+`protocols`. Agents use this to route the action through the correct
+protocol client.
+
+```json
+"actions": [
+  { "id": "list_products", "via": "a2a", "operation": "product.search" },
+  { "id": "checkout",      "via": "a2a", "operation": "checkout.create" }
+]
+```
+
+When an action has `via`, the named protocol MUST appear in `protocols`.
+When an action omits `via`, agents SHOULD assume direct HTTP at the
+declared `endpoint`/`method` (the v0.1 default behavior).
+
+### Why this exists
+
+Other agent protocols define how to talk. AWP defines who to talk to. By
+declaring sibling protocols inside agent.json, a surface gives every
+agent a single bootstrap URL — `/agent.json` — from which all other
+standards become reachable. Agents no longer guess the transport.
 
 ---
 
@@ -203,8 +292,10 @@ The core of agent.json. Each action represents something an agent can do.
 | `auth_required` | boolean | yes | Whether authentication is required |
 | `inputs` | object | yes | Typed input parameters |
 | `outputs` | object | yes | Typed output fields |
-| `endpoint` | string | yes | API endpoint path |
-| `method` | string | yes | HTTP method: `GET`, `POST`, `PUT`, `DELETE`, `PATCH` |
+| `endpoint` | string | conditional | API endpoint path. Required unless `via` references a protocol that supplies the endpoint |
+| `method` | string | conditional | HTTP method: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`. Required unless `via` is set |
+| `via` | string | no | Identifier of a protocol declared in `protocols` (see §5.5). When set, the action is invoked through that protocol |
+| `operation` | string | no | Protocol-specific operation name when `via` is set (e.g. an A2A method, an MCP tool name) |
 | `rate_limit` | string | no | Rate limit (e.g. `"30/minute"`) |
 | `idempotency` | object | no | Idempotency contract (see below) |
 | `execution_model` | string | no | `sync` (default) or `async` |
@@ -349,6 +440,15 @@ A conforming agent.json file MAY:
 ---
 
 ## 16. Changelog
+
+### v0.2 (2026-04-16)
+- Added `protocols` top-level field (§5.5) — declares sibling agent
+  protocols a surface speaks (A2A, MCP, ACP, AP2, x402, etc.) so agents
+  can route via known transports
+- Added optional `via` and `operation` fields on actions, linking actions
+  to a declared protocol
+- Reference implementation: `laclawclaw.com/.well-known/agent.json`
+- Backward compatible — v0.1 files validate as v0.2
 
 ### v0.1 (2026-03-16)
 - Initial draft
